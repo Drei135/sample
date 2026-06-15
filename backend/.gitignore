@@ -1,0 +1,27 @@
+# Dependency directories
+node_modules/
+vendor/
+
+# Configuration files
+.env
+config/config.php
+
+# Log files
+logs/
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Writable directories (CodeIgniter)
+backend/writable/
+!backend/writable/.htaccess
+!backend/writable/index.html
+
+# Production builds
+frontend/dist/

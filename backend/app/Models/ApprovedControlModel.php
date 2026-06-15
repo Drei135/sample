@@ -19,15 +19,21 @@ class ApprovedControlModel extends Model
      */
     public function getApprovedControlsWithActivityDetails(int $userId = null): array
     {
-        return $this->select('control_number.control_number,
-                              archived_activity_designs.activity_title,
-                              archived_activity_designs.start_date,
-                              archived_activity_designs.end_date,
-                              archived_activity_designs.start_time,
-                              archived_activity_designs.end_time,
-                              COALESCE(venues.venue_name, archived_activity_designs.venue) as venue')
-                    ->join('archived_activity_designs', 'archived_activity_designs.original_act_design_id = control_number.act_design_id', 'left')
-                    ->join('venues', 'venues.venue_id = archived_activity_designs.venue_id', 'left')
-                    ->findAll();
+        $builder = $this->select('control_number.control_number, 
+                                  control_number.act_design_id,
+                                  archived_activity_designs.activity_title,
+                                  archived_activity_designs.start_date,
+                                  archived_activity_designs.end_date,
+                                  archived_activity_designs.start_time,
+                                  archived_activity_designs.end_time,
+                                  COALESCE(venues.venue_name, archived_activity_designs.venue) as venue')
+                        ->join('archived_activity_designs', 'archived_activity_designs.original_act_design_id = control_number.act_design_id', 'inner')
+                        ->join('venues', 'venues.venue_id = archived_activity_designs.venue_id', 'left');
+
+        if ($userId !== null) {
+            $builder->where('control_number.user_id', $userId);
+        }
+
+        return $builder->findAll();
     }
 }

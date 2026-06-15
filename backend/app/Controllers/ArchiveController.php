@@ -8,23 +8,17 @@ class ArchiveController extends ResourceController
 {
     protected $format = 'json';
 
-    /**
-     * Fetch all records from the archive table
-     */
     public function index()
     {
         $db = \Config\Database::connect();
 
-        // Fetch Archived Designs
         $designs = $db->table('archived_activity_designs as aad')
             ->select('aad.*, aad.original_act_design_id as original_id, "design" as type, aad.activity_title as title, aad.form_type as form_label, users.username as office, aad.start_date as date, aad.archived_at as dateRaw')
             ->join('users', 'users.id = aad.user_id', 'left')
-            // Try to get control number if it still exists in source control_number table
             ->join('control_number as cn', 'cn.act_design_id = aad.original_act_design_id', 'left')
             ->select('COALESCE(cn.control_number, "N/A") as control')
             ->get()->getResultArray();
             
-        // Fetch Archived Reports
         $reports = $db->table('archived_accomplishment_reports as aar')
             ->select('aar.*, aar.original_report_id as original_id, "report" as type, aar.activity_title as title, "N/A" as form_label, users.username as office, aar.start_date as date, aar.control_number as control, aar.archived_at as dateRaw')
             ->join('users', 'users.id = aar.user_id', 'left')
@@ -32,7 +26,6 @@ class ArchiveController extends ResourceController
 
         $all = array_merge($designs, $reports);
         
-        // Sort by archived_at desc
         usort($all, function($a, $b) {
             return strtotime($b['archived_at']) - strtotime($a['archived_at']);
         });
@@ -43,9 +36,6 @@ class ArchiveController extends ResourceController
         ]);
     }
 
-    /**
-     * Move an Activity Design to Archive (Physical move)
-     */
     public function archiveDesign($id = null)
     {
         $db = \Config\Database::connect();
@@ -58,7 +48,6 @@ class ArchiveController extends ResourceController
         $body = $this->request->getJSON(true) ?? $this->request->getPost();
         $remarks = $body['remarks'] ?? '';
 
-        // 2. Prepare Archive record
         $archiveData = [
             'original_act_design_id' => $item['act_design_id'],
             'activity_title'         => $item['activity_title'],
@@ -79,8 +68,9 @@ class ArchiveController extends ResourceController
             'form_type'              => $item['form_type']
         ];
 
-        // 3. Insert and Delete
         $db->table('archived_activity_designs')->insert($archiveData);
+
+        // Delete original record to ensure it no longer appears in active lists
         $db->table('activity_design')->where('act_design_id', $id)->delete();
 
         $db->transComplete();
@@ -92,9 +82,6 @@ class ArchiveController extends ResourceController
         return $this->respond(['success' => true, 'message' => 'Activity Design archived and cleared from active list']);
     }
 
-    /**
-     * Move an Accomplishment Report to Archive (Physical move)
-     */
     public function archiveReport($id = null)
     {
         $db = \Config\Database::connect();
@@ -123,6 +110,8 @@ class ArchiveController extends ResourceController
         ];
 
         $db->table('archived_accomplishment_reports')->insert($archiveData);
+
+        // Delete original record to ensure it no longer appears in active lists
         $db->table('accomplishment_report')->where('id', $id)->delete();
 
         $db->transComplete();
